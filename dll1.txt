@@ -1,0 +1,41 @@
+public static class SalesMapper extends Mapper<Object, Text, Text, IntWritable> {
+
+        private final static IntWritable one = new IntWritable(1);
+        private Text country = new Text();
+
+        public void map(Object key, Text value, Context context) throws IOException, InterruptedException {
+            String[] fields = value.toString().split(",");  // Giả sử CSV ngăn cách bằng dấu phẩy
+            if (fields.length > 7) {  // Kiểm tra số trường dữ liệu hợp lệ
+                country.set(fields[7]);  // Trường thứ 8 là quốc gia (Country)
+                context.write(country, one);  // Ghi cặp (quốc gia, 1)
+            }
+        }
+    }
+
+    // Reducer class
+    public static class SalesReducer extends Reducer<Text, IntWritable, Text, IntWritable> {
+
+        public void reduce(Text key, Iterable<IntWritable> values, Context context)
+                throws IOException, InterruptedException {
+            int sum = 0;
+            for (IntWritable val : values) {
+                sum += val.get();  // Tổng hợp số sản phẩm đã bán theo từng quốc gia
+            }
+            context.write(key, new IntWritable(sum));  // Ghi kết quả ra (quốc gia, tổng số lượng sản phẩm)
+        }
+    }
+
+    // Main Method
+    public static void main(String[] args) throws Exception {
+        Configuration conf = new Configuration();
+        Job job = Job.getInstance(conf, "sales count by country");
+        job.setJarByClass(SalesByCountry.class);
+        job.setMapperClass(SalesMapper.class);
+        job.setCombinerClass(SalesReducer.class);
+        job.setReducerClass(SalesReducer.class);
+        job.setOutputKeyClass(Text.class);
+        job.setOutputValueClass(IntWritable.class);
+        FileInputFormat.addInputPath(job, new Path(args[0]));
+        FileOutputFormat.setOutputPath(job, new Path(args[1]));
+        System.exit(job.waitForCompletion(true) ? 0 : 1);
+    }
