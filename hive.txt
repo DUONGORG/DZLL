@@ -1,0 +1,36 @@
+SELECT 
+    country,
+    ROUND((gold / total) * 100, 2) AS gold_percentage,
+    ROUND((silver / total) * 100, 2) AS silver_percentage,
+    ROUND((bronze / total) * 100, 2) AS bronze_percentage
+FROM 
+    olympics
+WHERE 
+    total > 0
+ORDER BY 
+    gold_percentage DESC
+Limit 5;
+
+
+
+WITH ranked_medals AS (
+    SELECT 
+        region,
+        country,
+        total,
+        RANK() OVER (PARTITION BY region ORDER BY total DESC) AS rank
+    FROM 
+        olympics
+)
+
+SELECT 
+    region,
+    country,
+    total,
+    rank
+FROM 
+    ranked_medals
+WHERE 
+    rank <= 5
+ORDER BY 
+    region, rank;
